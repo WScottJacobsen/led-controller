@@ -14,6 +14,8 @@ import java.io.IOException;
 
 public class LedController extends PApplet {
 
+//TODO: Add sliders
+
 ArrayList<ArrayList<InputElement>> elements; //Holds all buttons and sliders, each ArrayList<InputElement> represents a "page"
 int numPages = 4; //Total number of pages
 final int MAIN_MENU = 0, EFFECTS = 1, EFFECT_SETTINGS = 2, LED_SETTINGS = 3;
@@ -34,10 +36,12 @@ public void setup() {
     }
 
     addElements(elements); //Initialize buttons and sliders
-    //Align the elements of all pages
-    for(int i = 0; i < numPages; i++){
-        alignToGrid(elements.get(i), 50, 10, 1); //Align with 50px of padding, 10px of element padding, and with 1 column
-    }
+
+    //Algin elements to grid
+    alignToGrid(elements.get(MAIN_MENU), 50, 10, 1); //Align with 50px of padding, 10px of element padding, and with 1 columns
+    alignToGrid(elements.get(EFFECTS), 50, 10, 3); //Align with 50px of padding, 10px of element padding, and with 3 columns
+    alignToGrid(elements.get(EFFECT_SETTINGS), 50, 10, 1); //Align with 50px of padding, 10px of element padding, and with 1 columns
+    alignToGrid(elements.get(LED_SETTINGS), 50, 10, 1); //Align with 50px of padding, 10px of element padding, and with 1 columns
 }
 
 public void draw() {
@@ -84,172 +88,169 @@ public void alignToGrid(ArrayList<InputElement> elements, int padding, int eleme
 //Where the InputElements and their effects are created
 public void addElements(ArrayList<ArrayList<InputElement>> elements){
 //=========================== MAIN MENU ===========================//
-    elements.get(MAIN_MENU).add(new Button("Effects", BUTTON_STYLE, true,
+    elements.get(MAIN_MENU).add(new Button("Effects", BUTTON_STYLE, true, false,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
+            public void execute() {
                 jumpTo(EFFECTS);
             }
-            public void secondaryAction() {
-                primaryAction();
-            }
         }
     ));
 
-    elements.get(MAIN_MENU).add(new Button("Effect Settings", BUTTON_STYLE, true,
+    elements.get(MAIN_MENU).add(new Button("Effect Settings", BUTTON_STYLE, true, false,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
+            public void execute() {
                 jumpTo(EFFECT_SETTINGS);
             }
-            public void secondaryAction() {
-                primaryAction();
-            }
         }
     ));
 
-    elements.get(MAIN_MENU).add(new Button("LED Strip Settings", BUTTON_STYLE, true,
+    elements.get(MAIN_MENU).add(new Button("LED Strip Settings", BUTTON_STYLE, true, false,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
+            public void execute() {
                 jumpTo(LED_SETTINGS);
-            }
-            public void secondaryAction() {
-                primaryAction();
             }
         }
     ));
 
 //=========================== EFFECTS PAGE ===========================//
-    elements.get(EFFECTS).add(new Button("Rainbow Wave", BUTTON_STYLE, true,
+    elements.get(EFFECTS).add(new Button("Rainbow Wave", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
             }
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Solid Rainbow", BUTTON_STYLE, true,
+    elements.get(EFFECTS).add(new Button("Solid Rainbow", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
             }
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Pulse Rainbow", BUTTON_STYLE, true,
+    elements.get(EFFECTS).add(new Button("Pulse Rainbow", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
             }
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Wander v1", BUTTON_STYLE, true,
+    elements.get(EFFECTS).add(new Button("Wander", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
             }
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Wander v2", BUTTON_STYLE, true,
+    elements.get(EFFECTS).add(new Button("USA", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
             }
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("USA", BUTTON_STYLE, true,
+    elements.get(EFFECTS).add(new Button("Music Reactive", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
             }
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true,
+    elements.get(EFFECTS).add(new Button("Video Reactive", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
+            }
+        }
+    ));
+
+    elements.get(EFFECTS).add(new Button("Solid Color", BUTTON_STYLE, true, true,
+        new ButtonAction(){
+            @Override
+            public void execute() {
+                println("clicked");
+                resetSelected(EFFECTS, 0);
+				clicked();
+            }
+        }
+    ));
+    //elements.get(EFFECTS).get(elements.get(EFFECTS).size() - 1).setValue(1);
+
+    elements.get(EFFECTS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true, false,
+        new ButtonAction(){
+            @Override
+            public void execute() {
                 jumpTo(MAIN_MENU);
-            }
-            public void secondaryAction() {
-                primaryAction();
             }
         }
     ));
 
 //=========================== EFFECT SETTINGS PAGE ===========================//
-    elements.get(EFFECT_SETTINGS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true,
+    elements.get(EFFECT_SETTINGS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true, false,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
+            public void execute() {
                 jumpTo(MAIN_MENU);
-            }
-            public void secondaryAction() {
-                primaryAction();
             }
         }
     ));
 
 //=========================== LED SETTINGS PAGE ===========================//
-    elements.get(LED_SETTINGS).add(new Button("Breathe", BUTTON_STYLE, true,
+    elements.get(LED_SETTINGS).add(new Button("Breathe", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(LED_SETTINGS, 0);
+				clicked();
             }
         }
     ));
 
-    elements.get(LED_SETTINGS).add(new Button("Blink", BUTTON_STYLE, true,
+    elements.get(LED_SETTINGS).add(new Button("Blink", BUTTON_STYLE, true, true,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
-                println("left clicked");
-            }
-            public void secondaryAction() {
-                println("right clicked");
+            public void execute() {
+                println("clicked");
+                resetSelected(LED_SETTINGS, 0);
+				clicked();
             }
         }
     ));
-    elements.get(LED_SETTINGS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true,
+    elements.get(LED_SETTINGS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true, false,
         new ButtonAction(){
             @Override
-            public void primaryAction() {
+            public void execute() {
                 jumpTo(MAIN_MENU);
-            }
-            public void secondaryAction() {
-                primaryAction();
             }
         }
     ));
@@ -264,31 +265,60 @@ public void jumpTo(int pageIndex){
         }
     }
 }
+
+//Disables all other buttons so there is only one action per click
+public void clicked(){
+    for(int i = 0; i < numPages; i++){
+        for(int j = 0; j < elements.get(i).size(); j++){
+            elements.get(i).get(j).setClicked(true);
+        }
+    }
+}
+
+//Resets all toggleable buttons on specified page to specified value
+public void resetSelected(int pageNum, float value){
+    for(int i = 0; i < elements.get(pageNum).size(); i++){
+        elements.get(pageNum).get(i).setValue(value);
+    }
+}
 class Button implements InputElement{
     private Rectangle hitbox;
     private String text;
     private ButtonAction action;
-    private boolean hover, clicked, enabled, visible;
+    private boolean hover, clicked, enabled, toggleable, toggled;
     private Style style;
+    private float value;
 
-    Button(String text, Rectangle hitbox, Style style, boolean enabled, ButtonAction action){
+    Button(String text, Rectangle hitbox, Style style, boolean enabled, boolean toggleable, ButtonAction action){
         this.text = text;
         this.hitbox = hitbox;
         this.style = style;
         this.action = action;
         this.enabled = enabled;
+        this.toggleable = toggleable;
+        this.toggled = false;
         this.hover = false;
         this.clicked = false;
     }
 
-    Button(String text, Style style, boolean enabled, ButtonAction action){
+    Button(String text, Style style, boolean enabled, boolean toggleable, ButtonAction action){
         this.text = text;
         this.hitbox = new Rectangle(0, 0, 0, 0);
         this.style = style;
         this.action = action;
         this.enabled = enabled;
+        this.toggleable = toggleable;
+        this.toggled = false;
         this.hover = false;
         this.clicked = false;
+    }
+
+    public float getValue(){
+        return toggled ? 1 : 0;
+    }
+
+    public void setValue(float value){
+        toggled = value == 0 ? false : true;
     }
 
     public void checkMouse(){
@@ -297,10 +327,10 @@ class Button implements InputElement{
             if(!mousePressed){
                 clicked = false;
             } else if(!clicked && enabled){
-                if(mouseButton == LEFT){
-                    action.primaryAction();
-                } else if(mouseButton == RIGHT){
-                    action.secondaryAction();
+                boolean tempValue = toggled;
+                action.execute();
+                if(toggleable){
+                    setValue(tempValue ? 0 : 1);
                 }
                 clicked = true;
             }
@@ -327,7 +357,7 @@ class Button implements InputElement{
 
     public void render(){
         int txtColor = style.getTextColor(), bgColor = style.getBackgroundColor();
-        if(hover && enabled){
+        if(hover && enabled || toggled){
             txtColor = style.getTextHover();
             bgColor = style.getBackgroundHover();
         }
@@ -354,8 +384,7 @@ class Button implements InputElement{
     }
 }
 interface ButtonAction{
-    public void primaryAction(); //Action preformed on left click
-    public void secondaryAction(); //Action preformed on right click
+    public void execute(); //Action preformed on click
 }
 interface InputElement{
     public void checkMouse(); //Check if intersecting with hitbox, preform action when necessary
@@ -364,6 +393,8 @@ interface InputElement{
     public boolean isEnabled(); //Checks if user can interact with element
     public void setBox(float x, float y, float w, float h); //Change hitbox for element
     public void setClicked(boolean value); //Tells whether or not to wait to new click before performing action
+    public float getValue(); //Returns value of element, 0 is false, everything else is true
+    public void setValue(float value); //Sets value of element
 }
 class Rectangle{
     private float x, y, w, h;
