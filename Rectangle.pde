@@ -15,7 +15,7 @@ class Rectangle{
         this.h = h;
     }
 
-    boolean insideRect(float xPos, float yPos){
+    boolean inside(float xPos, float yPos){
         return (xPos >= x - w / 2 && xPos <= x + w / 2) && (yPos >= y - h / 2 && yPos <= y + h / 2);
     }
 

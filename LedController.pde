@@ -1,17 +1,17 @@
-//TODO: Add sliders
+import java.util.Scanner;
 
 ArrayList<ArrayList<InputElement>> elements; //Holds all buttons and sliders, each ArrayList<InputElement> represents a "page"
 int numPages = 4; //Total number of pages
 final int MAIN_MENU = 0, EFFECTS = 1, EFFECT_SETTINGS = 2, LED_SETTINGS = 3;
 int pageNumber = MAIN_MENU; //Page that is visible
-Style BUTTON_STYLE;
+Style INPUT_STYLE;
 float titleHeight = 50.0;
 
 //Initialize variables and create and align InputElements
 void setup() {
     size(800, 800);
     rectMode(CENTER); //Draw rectangles from the center point
-    BUTTON_STYLE = new Style(#000000, #FFFFFF, #FFFFFF, #000000, #000000, 2, createFont("mononoki.ttf", 16, true), 16); //Black text on white background with black outline, inverted colors when hovered, mononoki font at 16px
+    INPUT_STYLE = new Style(#000000, #FFFFFF, #FFFFFF, #000000, #000000, 1, createFont("mononoki.ttf", 16, true), 16); //Black text on white background with black outline, inverted colors when hovered, mononoki font at 16px
 
     //Set up pages with empty ArrayList
     elements = new ArrayList<ArrayList<InputElement>>();
@@ -22,10 +22,18 @@ void setup() {
     addElements(elements); //Initialize buttons and sliders
 
     //Algin elements to grid
-    alignToGrid(elements.get(MAIN_MENU), 50, 10, 1); //Align with 50px of padding, 10px of element padding, and with 1 columns
+    int[] menuLayout = {1, 1, 1, 2};
+    alignToGrid(elements.get(MAIN_MENU), 50, 10, menuLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
+
     alignToGrid(elements.get(EFFECTS), 50, 10, 3); //Align with 50px of padding, 10px of element padding, and with 3 columns
-    alignToGrid(elements.get(EFFECT_SETTINGS), 50, 10, 1); //Align with 50px of padding, 10px of element padding, and with 1 columns
-    alignToGrid(elements.get(LED_SETTINGS), 50, 10, 1); //Align with 50px of padding, 10px of element padding, and with 1 columns
+
+    int[] effectSettingsLayout = {1, 3, 1, 1, 1};
+    alignToGrid(elements.get(EFFECT_SETTINGS), 50, 10, effectSettingsLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
+
+    int[] ledSettingsLayout = {2, 2, 1};
+    alignToGrid(elements.get(LED_SETTINGS), 50, 10, ledSettingsLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
+
+    loadSettings("settings.dat");
 }
 
 void draw() {
@@ -69,10 +77,65 @@ void alignToGrid(ArrayList<InputElement> elements, int padding, int elementPaddi
     }
 }
 
+//Allows you to specify uneven grid
+void alignToGrid(ArrayList<InputElement> elements, int padding, int elementPadding, int[] rowCols){
+    int rows = rowCols.length;
+    float usableWidth = width - padding * 2;
+    float usableHeight = height - padding * 2 - titleHeight;
+    float colWidth;
+    float rowHeight = usableHeight / rows;
+    float boxWidth;
+    float boxHeight = rowHeight - elementPadding * 2;
+    int count = 0;
+
+    for(int r = 0; r < rows; r++){
+        int cols = rowCols[r];
+        colWidth = usableWidth / cols;
+        boxWidth = colWidth - elementPadding * 2;
+        for(int c = 0; c < cols; c++){
+            float x = padding + (c + 1 / 2.0) * colWidth;
+            float y = padding + (r + 1 / 2.0) * rowHeight + titleHeight;
+            if(count < elements.size()){
+                elements.get(count).setBox(x, y, boxWidth, boxHeight);
+                count++;
+            }
+        }
+    }
+}
+
+void writeSettings(String filename){
+    PrintWriter settings = createWriter(filename);
+    String line = "";
+    for(int i = 0; i < elements.size(); i++){
+        line += i + " ";
+        for(int j = 0; j < elements.get(i).size(); j++){
+            line += elements.get(i).get(j).getValue() + " ";
+        }
+        line.trim();
+        settings.println(line);
+        line = "";
+    }
+    settings.close();
+}
+
+void loadSettings(String filename){
+    String[] lines = loadStrings(filename);
+    Scanner chopper;
+    String line;
+    for(int i = 0; i < lines.length; i++){
+        line = lines[i];
+        chopper = new Scanner(line);
+        int index = chopper.nextInt();
+        for(int j = 0; j < elements.get(index).size(); j++){
+            elements.get(index).get(j).setValue(chopper.nextFloat());
+        }
+    }
+}
+
 //Where the InputElements and their effects are created
 void addElements(ArrayList<ArrayList<InputElement>> elements){
 //=========================== MAIN MENU ===========================//
-    elements.get(MAIN_MENU).add(new Button("Effects", BUTTON_STYLE, true, false,
+    elements.get(MAIN_MENU).add(new Button("Effects", INPUT_STYLE, true, false,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -81,7 +144,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(MAIN_MENU).add(new Button("Effect Settings", BUTTON_STYLE, true, false,
+    elements.get(MAIN_MENU).add(new Button("Effect Settings", INPUT_STYLE, true, false,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -90,7 +153,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(MAIN_MENU).add(new Button("LED Strip Settings", BUTTON_STYLE, true, false,
+    elements.get(MAIN_MENU).add(new Button("LED Strip Settings", INPUT_STYLE, true, false,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -99,8 +162,26 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
+    elements.get(MAIN_MENU).add(new Button("Save Settings", INPUT_STYLE, true, false,
+        new ButtonAction(){
+            @Override
+            public void execute() {
+                writeSettings("data\\settings.dat");
+            }
+        }
+    ));
+
+    elements.get(MAIN_MENU).add(new Button("Restore Default Settings", INPUT_STYLE, true, false,
+        new ButtonAction(){
+            @Override
+            public void execute() {
+                loadSettings("default_settings.dat");
+            }
+        }
+    ));
+
 //=========================== EFFECTS PAGE ===========================//
-    elements.get(EFFECTS).add(new Button("Rainbow Wave", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("Rainbow Wave", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -111,7 +192,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Solid Rainbow", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("Solid Rainbow", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -122,7 +203,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Pulse Rainbow", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("Pulse Rainbow", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -133,7 +214,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Wander", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("Wander", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -144,7 +225,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("USA", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("USA", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -155,7 +236,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Music Reactive", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("Music Reactive", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -166,7 +247,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Video Reactive", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("Video Reactive", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -177,7 +258,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         }
     ));
 
-    elements.get(EFFECTS).add(new Button("Solid Color", BUTTON_STYLE, true, true,
+    elements.get(EFFECTS).add(new Button("Solid Color", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -187,9 +268,8 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             }
         }
     ));
-    //elements.get(EFFECTS).get(elements.get(EFFECTS).size() - 1).setValue(1);
 
-    elements.get(EFFECTS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true, false,
+    elements.get(EFFECTS).add(new Button("BACK TO MAIN MENU", INPUT_STYLE, true, false,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -199,7 +279,19 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
     ));
 
 //=========================== EFFECT SETTINGS PAGE ===========================//
-    elements.get(EFFECT_SETTINGS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true, false,
+    elements.get(EFFECT_SETTINGS).add(new Slider("Effect Delay", "ms", 10, 0, 300, 25, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("Solid Color Red Channel", "", 1, 0, 255, 0, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("Solid Color Green Channel", "", 1, 0, 255, 0, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("Solid Color Blue Channel", "", 1, 0, 255, 255, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("Music Sensitivity", "%", 1, 0, 100, 50, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("Rainbow Speed (higher is faster)", "", 100, 0.01, 3.14, 0.1, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Button("BACK TO MAIN MENU", INPUT_STYLE, true, false,
         new ButtonAction(){
             @Override
             public void execute() {
@@ -209,28 +301,40 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
     ));
 
 //=========================== LED SETTINGS PAGE ===========================//
-    elements.get(LED_SETTINGS).add(new Button("Breathe", BUTTON_STYLE, true, true,
+    elements.get(LED_SETTINGS).add(new Button("Breathe", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
                 println("clicked");
-                resetSelected(LED_SETTINGS, 0);
 				clicked();
             }
         }
     ));
 
-    elements.get(LED_SETTINGS).add(new Button("Blink", BUTTON_STYLE, true, true,
+    elements.get(LED_SETTINGS).add(new Button("Blink", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
                 println("clicked");
-                resetSelected(LED_SETTINGS, 0);
 				clicked();
             }
         }
     ));
-    elements.get(LED_SETTINGS).add(new Button("BACK TO MAIN MENU", BUTTON_STYLE, true, false,
+
+    elements.get(LED_SETTINGS).add(new Slider("Brightness", "%", 10, 0, 100, 50, INPUT_STYLE, true));
+
+    elements.get(LED_SETTINGS).add(new Button("Strip On", INPUT_STYLE, true, true,
+        new ButtonAction(){
+            @Override
+            public void execute() {
+                println("clicked");
+				clicked();
+            }
+        }
+    ));
+    elements.get(LED_SETTINGS).get(elements.get(LED_SETTINGS).size() - 1).setValue(1);
+
+    elements.get(LED_SETTINGS).add(new Button("BACK TO MAIN MENU", INPUT_STYLE, true, false,
         new ButtonAction(){
             @Override
             public void execute() {

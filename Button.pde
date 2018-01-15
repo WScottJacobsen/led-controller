@@ -39,7 +39,7 @@ class Button implements InputElement{
     }
 
     void checkMouse(){
-        if(hitbox.insideRect(mouseX, mouseY)) {
+        if(hitbox.inside(mouseX, mouseY)) {
             hover = true;
             if(!mousePressed){
                 clicked = false;
