@@ -1,4 +1,12 @@
 import java.util.Scanner;
+import processing.serial.*;
+import java.awt.AWTException;
+import java.awt.Dimension;
+import java.awt.Rectangle;
+import java.awt.Robot;
+import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 
 ArrayList<ArrayList<InputElement>> elements; //Holds all buttons and sliders, each ArrayList<InputElement> represents a "page"
 int numPages = 4; //Total number of pages
@@ -6,6 +14,12 @@ final int MAIN_MENU = 0, EFFECTS = 1, EFFECT_SETTINGS = 2, LED_SETTINGS = 3;
 int pageNumber = MAIN_MENU; //Page that is visible
 Style INPUT_STYLE;
 float titleHeight = 50.0;
+Strip strip = new Strip(288); //Initialize strip with 288 led
+ArrayList<Integer> effects = new ArrayList<Integer>();
+int delay, lastUpdate;
+float blinkLength, blinkDelay, position, solidColor, rbFreq, pulseDelay, usaFreq, musicSensitivity, breatheFreq, maxBrightness;
+Serial port;
+Effect effectHandler = new Effect(strip);
 
 //Initialize variables and create and align InputElements
 void setup() {
@@ -20,6 +34,8 @@ void setup() {
     }
 
     addElements(elements); //Initialize buttons and sliders
+    readSettings();
+    position = 0;
 
     //Algin elements to grid
     int[] menuLayout = {1, 1, 1, 2};
@@ -27,12 +43,17 @@ void setup() {
 
     alignToGrid(elements.get(EFFECTS), 50, 10, 3); //Align with 50px of padding, 10px of element padding, and with 3 columns
 
-    int[] effectSettingsLayout = {1, 3, 1, 1, 1};
+    int[] effectSettingsLayout = {1, 3, 1, 2, 1, 1};
     alignToGrid(elements.get(EFFECT_SETTINGS), 50, 10, effectSettingsLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
 
-    int[] ledSettingsLayout = {2, 2, 1};
+    int[] ledSettingsLayout = {2, 2, 3, 1};
     alignToGrid(elements.get(LED_SETTINGS), 50, 10, ledSettingsLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
 
+    delay = (int)elements.get(EFFECT_SETTINGS).get(0).getValue();
+    lastUpdate = millis();
+    //port = new Serial(this, Serial.list()[0], 9600);
+
+    writeSettings("data\\default_settings.dat");
     loadSettings("settings.dat");
 }
 
@@ -54,6 +75,31 @@ void draw() {
     textSize(titleHeight);
     fill(0);
     text(title, width / 2, titleHeight / 2);
+
+    readSettings();
+    if(elements.get(LED_SETTINGS).get(0).getValue() != 0){
+        addEffect(Effect.BREATHE);
+    } else{
+        effects.remove((Integer)Effect.BREATHE);
+    }
+    if(elements.get(LED_SETTINGS).get(2).getValue() != 0){
+        addEffect(Effect.OFF);
+    } else{
+        effects.remove((Integer)Effect.OFF);
+    }
+    if(elements.get(LED_SETTINGS).get(3).getValue() != 0){
+        addEffect(Effect.BLINK);
+    } else{
+        effects.remove((Integer)Effect.BLINK);
+    }
+    delay = (int)elements.get(EFFECT_SETTINGS).get(0).getValue();
+    strip.setBrightness(maxBrightness);
+    if(millis() >= lastUpdate + delay){
+        applyEffects();
+        //strip.update(port);
+        lastUpdate = millis();
+        position++;
+    }
 }
 
 //Given the contents of a page, padding between edge of window, padding between elements, and number of columns, aligns elements to a grid
@@ -181,11 +227,22 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
     ));
 
 //=========================== EFFECTS PAGE ===========================//
+    elements.get(EFFECTS).add(new Button("Solid Color", INPUT_STYLE, true, true,
+        new ButtonAction(){
+            @Override
+            public void execute() {
+                addEffect(Effect.SOLID);
+                resetSelected(EFFECTS, 0);
+                clicked();
+            }
+        }
+    ));
+
     elements.get(EFFECTS).add(new Button("Rainbow Wave", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
+                addEffect(Effect.RB_WAVE);
                 resetSelected(EFFECTS, 0);
 				clicked();
             }
@@ -196,7 +253,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
+                addEffect(Effect.RB_SOLID);
                 resetSelected(EFFECTS, 0);
 				clicked();
             }
@@ -207,7 +264,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
+                addEffect(Effect.RB_PULSE);
                 resetSelected(EFFECTS, 0);
 				clicked();
             }
@@ -218,7 +275,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
+                addEffect(Effect.WANDER);
                 resetSelected(EFFECTS, 0);
 				clicked();
             }
@@ -229,7 +286,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
+                addEffect(Effect.USA);
                 resetSelected(EFFECTS, 0);
 				clicked();
             }
@@ -240,7 +297,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
+                addEffect(Effect.MUSIC);
                 resetSelected(EFFECTS, 0);
 				clicked();
             }
@@ -251,18 +308,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
-                resetSelected(EFFECTS, 0);
-				clicked();
-            }
-        }
-    ));
-
-    elements.get(EFFECTS).add(new Button("Solid Color", INPUT_STYLE, true, true,
-        new ButtonAction(){
-            @Override
-            public void execute() {
-                println("clicked");
+                addEffect(Effect.VIDEO);
                 resetSelected(EFFECTS, 0);
 				clicked();
             }
@@ -281,15 +327,19 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
 //=========================== EFFECT SETTINGS PAGE ===========================//
     elements.get(EFFECT_SETTINGS).add(new Slider("Effect Delay", "ms", 10, 0, 300, 25, INPUT_STYLE, true));
 
-    elements.get(EFFECT_SETTINGS).add(new Slider("Solid Color Red Channel", "", 1, 0, 255, 0, INPUT_STYLE, true));
+    elements.get(EFFECT_SETTINGS).add(new Slider("Red Channel", "", 1, 0, 255, 0, INPUT_STYLE, true));
 
-    elements.get(EFFECT_SETTINGS).add(new Slider("Solid Color Green Channel", "", 1, 0, 255, 0, INPUT_STYLE, true));
+    elements.get(EFFECT_SETTINGS).add(new Slider("Green Channel", "", 1, 0, 255, 0, INPUT_STYLE, true));
 
-    elements.get(EFFECT_SETTINGS).add(new Slider("Solid Color Blue Channel", "", 1, 0, 255, 255, INPUT_STYLE, true));
+    elements.get(EFFECT_SETTINGS).add(new Slider("Blue Channel", "", 1, 0, 255, 255, INPUT_STYLE, true));
 
     elements.get(EFFECT_SETTINGS).add(new Slider("Music Sensitivity", "%", 1, 0, 100, 50, INPUT_STYLE, true));
 
-    elements.get(EFFECT_SETTINGS).add(new Slider("Rainbow Speed (higher is faster)", "", 100, 0.01, 3.14, 0.1, INPUT_STYLE, true));
+    elements.get(EFFECT_SETTINGS).add(new Slider("Rainbow Frequency", "", 100, 0.01, 3.14, 0.1, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("Rainbow Pulse Delay", "ms", 1, 1, 5000, 500, INPUT_STYLE, true));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("USA Color Length", " pixels", 1, 1, strip.length(), 24, INPUT_STYLE, true));
 
     elements.get(EFFECT_SETTINGS).add(new Button("BACK TO MAIN MENU", INPUT_STYLE, true, false,
         new ButtonAction(){
@@ -305,34 +355,37 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
 				clicked();
             }
         }
     ));
 
-    elements.get(LED_SETTINGS).add(new Button("Blink", INPUT_STYLE, true, true,
-        new ButtonAction(){
-            @Override
-            public void execute() {
-                println("clicked");
-				clicked();
-            }
-        }
-    ));
-
-    elements.get(LED_SETTINGS).add(new Slider("Brightness", "%", 10, 0, 100, 50, INPUT_STYLE, true));
+    elements.get(LED_SETTINGS).add(new Slider("Breathe Frequency", "", 100, 0.01, 3.14, 0.1, INPUT_STYLE, true));
 
     elements.get(LED_SETTINGS).add(new Button("Strip On", INPUT_STYLE, true, true,
         new ButtonAction(){
             @Override
             public void execute() {
-                println("clicked");
 				clicked();
             }
         }
     ));
     elements.get(LED_SETTINGS).get(elements.get(LED_SETTINGS).size() - 1).setValue(1);
+
+    elements.get(LED_SETTINGS).add(new Slider("Max Brightness", "%", 10, 0, 100, 50, INPUT_STYLE, true));
+
+    elements.get(LED_SETTINGS).add(new Button("Blink", INPUT_STYLE, true, true,
+        new ButtonAction(){
+            @Override
+            public void execute() {
+				clicked();
+            }
+        }
+    ));
+
+    elements.get(LED_SETTINGS).add(new Slider("Blink Length", "ms", 1, 1, 10000, 500, INPUT_STYLE, true));
+
+    elements.get(LED_SETTINGS).add(new Slider("Time Between Blinks", "ms", 1, 1, 10000, 3000, INPUT_STYLE, true));
 
     elements.get(LED_SETTINGS).add(new Button("BACK TO MAIN MENU", INPUT_STYLE, true, false,
         new ButtonAction(){
@@ -342,6 +395,78 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             }
         }
     ));
+}
+
+void addEffect(int effectId){
+    //If adding a non global effect, remove all non-globals then add it
+    if(!effectHandler.isGlobal(effectId)){
+        for(int i = effects.size() - 1; i >= 0; i--){
+            if(!effectHandler.isGlobal(effects.get(i))){
+                effects.remove(i);
+            }
+        }
+    }
+    effects.add(effectId);
+
+    //Arrange global effects according to priority
+    if(effects.remove((Integer)Effect.BREATHE)){
+        effects.add(Effect.BREATHE);
+    }
+    if(effects.remove((Integer)Effect.BLINK)){
+        effects.add(Effect.BLINK);
+    }
+    if(effects.remove((Integer)Effect.OFF)){
+        effects.add(Effect.OFF);
+    }
+}
+
+//Update various settings variables
+void readSettings(){
+    int r = (int)elements.get(EFFECT_SETTINGS).get(1).getValue();
+    int g = (int)elements.get(EFFECT_SETTINGS).get(2).getValue();
+    int b = (int)elements.get(EFFECT_SETTINGS).get(3).getValue();
+    musicSensitivity = elements.get(EFFECT_SETTINGS).get(4).getValue();
+    solidColor = color(r, g, b);
+    rbFreq = elements.get(EFFECT_SETTINGS).get(5).getValue();
+    pulseDelay = elements.get(EFFECT_SETTINGS).get(6).getValue();
+    usaFreq = elements.get(EFFECT_SETTINGS).get(7).getValue();
+    breatheFreq = elements.get(LED_SETTINGS).get(1).getValue();
+    maxBrightness = elements.get(LED_SETTINGS).get(3).getValue();
+    blinkLength = elements.get(LED_SETTINGS).get(5).getValue();
+    blinkDelay = elements.get(LED_SETTINGS).get(6).getValue();
+}
+
+void applyEffects(){
+    float[] settings = {0.0};
+    ArrayList<InputElement> effectsPage = elements.get(EFFECTS);
+    ArrayList<InputElement> ledSettingsPage = elements.get(LED_SETTINGS);
+    for(int eff : effects){
+        if(eff == Effect.SOLID){
+            settings = new float[]{solidColor};
+        }
+        if(eff == Effect.RB_WAVE){
+            settings = new float[]{rbFreq, position};
+        }
+        if(eff == Effect.RB_SOLID){
+            settings = new float[]{rbFreq, position};
+        }
+        if(eff == Effect.RB_PULSE){
+            settings = new float[]{pulseDelay, position};
+        }
+        if(eff == Effect.USA){
+            settings = new float[]{usaFreq, position};
+        }
+        if(eff == Effect.MUSIC){
+            settings = new float[]{musicSensitivity};
+        }
+        if(eff == Effect.BREATHE){
+            settings = new float[]{breatheFreq, position, maxBrightness};
+        }
+        if(eff == Effect.BLINK){
+            settings = new float[]{blinkLength, blinkDelay};
+        }
+        effectHandler.fromID(eff, settings);
+    }
 }
 
 //Given the index of a page, go to it and disable all other buttons
@@ -365,7 +490,11 @@ void clicked(){
 
 //Resets all toggleable buttons on specified page to specified value
 void resetSelected(int pageNum, float value){
+    InputElement element;
     for(int i = 0; i < elements.get(pageNum).size(); i++){
-        elements.get(pageNum).get(i).setValue(value);
+        element = elements.get(pageNum).get(i);
+        if(element instanceof Button){
+            element.setValue(value);
+        }
     }
 }

@@ -11,6 +11,8 @@ class Slider implements InputElement{
         this.unit = unit;
         this.step = step;
         this.totalHitbox = hitbox;
+        this.tab = new Rectangle(0, 0, 0, 0);
+        this.bar = new Rectangle(0, 0, 0, 0);
         generateBoxes();
         this.style = style;
         this.min = min;
@@ -26,6 +28,8 @@ class Slider implements InputElement{
         this.step = step;
         this.style = style;
         this.totalHitbox = new Rectangle(0, 0, 0, 0);
+        this.tab = new Rectangle(0, 0, 0, 0);
+        this.bar = new Rectangle(0, 0, 0, 0);
         this.min = min;
         this.max = max;
         this.value = value;
