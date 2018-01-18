@@ -1,8 +1,8 @@
 import java.util.Scanner;
 import processing.serial.*;
+import processing.sound.*;
 import java.awt.AWTException;
 import java.awt.Dimension;
-import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
@@ -17,9 +17,13 @@ float titleHeight = 50.0;
 Strip strip = new Strip(288); //Initialize strip with 288 led
 ArrayList<Integer> effects = new ArrayList<Integer>();
 int delay, lastUpdate;
-float blinkLength, blinkDelay, position, solidColor, rbFreq, pulseDelay, usaFreq, musicSensitivity, breatheFreq, maxBrightness;
+float blinkLength, blinkDelay, position, solidColor, rbFreq, pulseDelay, usaFreq, speed, breatheFreq, maxBrightness, vol;
 Serial port;
 Effect effectHandler = new Effect(strip);
+Amplitude amp;
+AudioIn in;
+
+//TODO: Music Reactive doesnt work, faster video responsive, pulse start w/o changing setting
 
 //Initialize variables and create and align InputElements
 void setup() {
@@ -42,7 +46,6 @@ void setup() {
     alignToGrid(elements.get(MAIN_MENU), 50, 10, menuLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
 
     alignToGrid(elements.get(EFFECTS), 50, 10, 3); //Align with 50px of padding, 10px of element padding, and with 3 columns
-
     int[] effectSettingsLayout = {1, 3, 1, 2, 1, 1};
     alignToGrid(elements.get(EFFECT_SETTINGS), 50, 10, effectSettingsLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
 
@@ -51,7 +54,14 @@ void setup() {
 
     delay = (int)elements.get(EFFECT_SETTINGS).get(0).getValue();
     lastUpdate = millis();
-    //port = new Serial(this, Serial.list()[0], 9600);
+    port = new Serial(this, Serial.list()[0], 500000);
+    port.clear();
+
+
+    amp = new Amplitude(this);
+    in = new AudioIn(this, 0);
+    in.start();
+    amp.input(in);
 
     writeSettings("data\\default_settings.dat");
     loadSettings("settings.dat");
@@ -78,25 +88,34 @@ void draw() {
 
     readSettings();
     if(elements.get(LED_SETTINGS).get(0).getValue() != 0){
-        addEffect(Effect.BREATHE);
+        if(!effects.contains(Effect.BREATHE)){
+            addEffect(Effect.BREATHE);
+        }
     } else{
         effects.remove((Integer)Effect.BREATHE);
     }
-    if(elements.get(LED_SETTINGS).get(2).getValue() != 0){
-        addEffect(Effect.OFF);
+    if(elements.get(LED_SETTINGS).get(2).getValue() == 0){
+        if(!effects.contains(Effect.BLINK)){
+            addEffect(Effect.OFF);
+        }
     } else{
         effects.remove((Integer)Effect.OFF);
     }
-    if(elements.get(LED_SETTINGS).get(3).getValue() != 0){
-        addEffect(Effect.BLINK);
+    if(elements.get(LED_SETTINGS).get(4).getValue() != 0){
+        if(!effects.contains(Effect.BLINK)){
+            println(effects);
+            addEffect(Effect.BLINK);
+        }
     } else{
         effects.remove((Integer)Effect.BLINK);
     }
+    vol = amp.analyze();
     delay = (int)elements.get(EFFECT_SETTINGS).get(0).getValue();
     strip.setBrightness(maxBrightness);
+
     if(millis() >= lastUpdate + delay){
         applyEffects();
-        //strip.update(port);
+        strip.update(port);
         lastUpdate = millis();
         position++;
     }
@@ -333,7 +352,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
 
     elements.get(EFFECT_SETTINGS).add(new Slider("Blue Channel", "", 1, 0, 255, 255, INPUT_STYLE, true));
 
-    elements.get(EFFECT_SETTINGS).add(new Slider("Music Sensitivity", "%", 1, 0, 100, 50, INPUT_STYLE, true));
+    elements.get(EFFECT_SETTINGS).add(new Slider("Music Color Speed", " pixels/second", 1, 1, strip.length() / 2, 20, INPUT_STYLE, true));
 
     elements.get(EFFECT_SETTINGS).add(new Slider("Rainbow Frequency", "", 100, 0.01, 3.14, 0.1, INPUT_STYLE, true));
 
@@ -425,7 +444,7 @@ void readSettings(){
     int r = (int)elements.get(EFFECT_SETTINGS).get(1).getValue();
     int g = (int)elements.get(EFFECT_SETTINGS).get(2).getValue();
     int b = (int)elements.get(EFFECT_SETTINGS).get(3).getValue();
-    musicSensitivity = elements.get(EFFECT_SETTINGS).get(4).getValue();
+    speed = elements.get(EFFECT_SETTINGS).get(4).getValue();
     solidColor = color(r, g, b);
     rbFreq = elements.get(EFFECT_SETTINGS).get(5).getValue();
     pulseDelay = elements.get(EFFECT_SETTINGS).get(6).getValue();
@@ -457,7 +476,7 @@ void applyEffects(){
             settings = new float[]{usaFreq, position};
         }
         if(eff == Effect.MUSIC){
-            settings = new float[]{musicSensitivity};
+            settings = new float[]{speed, vol};
         }
         if(eff == Effect.BREATHE){
             settings = new float[]{breatheFreq, position, maxBrightness};

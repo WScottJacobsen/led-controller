@@ -2,29 +2,15 @@ class Strip{
     private int ledCount;
     private float brightness;
     private int[] leds;
-    private long clockSpeed;
 
     Strip(int ledCount){
         this.ledCount = ledCount;
         this.leds = new int[ledCount];
-        this.clockSpeed = 800000;
-        this.brightness = 50.0;
-    }
-
-    Strip(int ledCount, long clockSpeed){
-        this.ledCount = ledCount;
-        this.leds = new int[ledCount];
-        this.clockSpeed = clockSpeed;
         this.brightness = 50.0;
     }
 
     int length(){
         return ledCount;
-    }
-
-    void init(Serial port){
-        port.write(ledCount + ";");
-        port.write(clockSpeed + ";");
     }
 
     void set(int pixel, int col){
@@ -44,14 +30,27 @@ class Strip{
     }
 
     void update(Serial port){
-        byte[] stream = new byte[ledCount * 3];
+        String output = "";
+        int[] colors = applyBrightness();
+        int r = 255, g = 0, b = 0;
         for(int i = 0; i < ledCount; i++){
-            int col = leds[i];
-            stream[i] = (byte)(col >> 16 & 0xFF);
-            stream[i + 1] = (byte)(col >> 8 & 0xFF);
-            stream[i + 2] = (byte)(col & 0xFF);
+            int col = colors[i];
+            r = (col >> 16 & 0xFF);
+            g = (col >> 8 & 0xFF);
+            b = (col & 0xFF);
+            output += r + "," + g + "," + b + "\n";
         }
-        port.write(stream);
-        port.write("" + brightness);
+        //println(output);
+        port.write(output);
+    }
+
+    int[] applyBrightness(){
+        int[] temp = new int[ledCount];
+        colorMode(HSB, 100);
+        for(int i = 0; i < ledCount; i++){
+            temp[i] = color(hue(leds[i]), saturation(leds[i]), brightness);
+        }
+        colorMode(RGB, 255);
+        return temp;
     }
 }
