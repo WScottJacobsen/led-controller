@@ -12,6 +12,12 @@ import java.awt.Robot;
 import java.awt.Toolkit; 
 import java.awt.image.BufferedImage; 
 import java.io.IOException; 
+import ddf.minim.*; 
+import ddf.minim.analysis.*; 
+import ddf.minim.effects.*; 
+import ddf.minim.signals.*; 
+import ddf.minim.spi.*; 
+import ddf.minim.ugens.*; 
 
 import java.util.HashMap; 
 import java.util.ArrayList; 
@@ -34,6 +40,12 @@ public class LedController extends PApplet {
 
 
 
+
+
+
+
+
+
 ArrayList<ArrayList<InputElement>> elements; //Holds all buttons and sliders, each ArrayList<InputElement> represents a "page"
 int numPages = 4; //Total number of pages
 final int MAIN_MENU = 0, EFFECTS = 1, EFFECT_SETTINGS = 2, LED_SETTINGS = 3;
@@ -43,11 +55,13 @@ float titleHeight = 50.0f;
 Strip strip = new Strip(288); //Initialize strip with 288 led
 ArrayList<Integer> effects = new ArrayList<Integer>();
 int delay, lastUpdate;
-float blinkLength, blinkDelay, position, solidColor, rbFreq, pulseDelay, usaFreq, speed, breatheFreq, maxBrightness, vol;
+float blinkLength, blinkDelay, position, solidColor, rbFreq, pulseDelay, usaFreq, speed, breatheFreq, maxBrightness, vol, prevVol = 0;
 Serial port;
 Effect effectHandler = new Effect(strip);
 Amplitude amp;
 AudioIn in;
+Minim minim;
+AudioInput out;
 
 //TODO: Music Reactive doesnt work, faster video responsive, pulse start w/o changing setting
 
@@ -72,7 +86,7 @@ public void setup() {
     alignToGrid(elements.get(MAIN_MENU), 50, 10, menuLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
 
     alignToGrid(elements.get(EFFECTS), 50, 10, 3); //Align with 50px of padding, 10px of element padding, and with 3 columns
-    int[] effectSettingsLayout = {1, 3, 1, 2, 1, 1};
+    int[] effectSettingsLayout = {1, 3, 2, 2, 1, 1};
     alignToGrid(elements.get(EFFECT_SETTINGS), 50, 10, effectSettingsLayout); //Align with 50px of padding, 10px of element padding, and with 1 columns
 
     int[] ledSettingsLayout = {2, 2, 3, 1};
@@ -88,6 +102,9 @@ public void setup() {
     in = new AudioIn(this, 0);
     in.start();
     amp.input(in);
+
+    minim = new Minim(this);
+    out = minim.getLineIn();
 
     writeSettings("data\\default_settings.dat");
     loadSettings("settings.dat");
@@ -121,7 +138,7 @@ public void draw() {
         effects.remove((Integer)Effect.BREATHE);
     }
     if(elements.get(LED_SETTINGS).get(2).getValue() == 0){
-        if(!effects.contains(Effect.BLINK)){
+        if(!effects.contains(Effect.OFF)){
             addEffect(Effect.OFF);
         }
     } else{
@@ -129,12 +146,12 @@ public void draw() {
     }
     if(elements.get(LED_SETTINGS).get(4).getValue() != 0){
         if(!effects.contains(Effect.BLINK)){
-            println(effects);
             addEffect(Effect.BLINK);
         }
     } else{
         effects.remove((Integer)Effect.BLINK);
     }
+    prevVol = vol;
     vol = amp.analyze();
     delay = (int)elements.get(EFFECT_SETTINGS).get(0).getValue();
     strip.setBrightness(maxBrightness);
@@ -378,7 +395,16 @@ public void addElements(ArrayList<ArrayList<InputElement>> elements){
 
     elements.get(EFFECT_SETTINGS).add(new Slider("Blue Channel", "", 1, 0, 255, 255, INPUT_STYLE, true));
 
-    elements.get(EFFECT_SETTINGS).add(new Slider("Music Color Speed", " pixels/second", 1, 1, strip.length() / 2, 20, INPUT_STYLE, true));
+    elements.get(EFFECT_SETTINGS).add(new Button("Reset maximum volume", INPUT_STYLE, true, false,
+        new ButtonAction(){
+            @Override
+            public void execute() {
+                effectHandler.resetMaxVol();
+            }
+        }
+    ));
+
+    elements.get(EFFECT_SETTINGS).add(new Slider("Music Color Speed", " pixels/second", 1, 1, strip.length() / 2, 75, INPUT_STYLE, true));
 
     elements.get(EFFECT_SETTINGS).add(new Slider("Rainbow Frequency", "", 100, 0.01f, 3.14f, 0.1f, INPUT_STYLE, true));
 
@@ -470,11 +496,11 @@ public void readSettings(){
     int r = (int)elements.get(EFFECT_SETTINGS).get(1).getValue();
     int g = (int)elements.get(EFFECT_SETTINGS).get(2).getValue();
     int b = (int)elements.get(EFFECT_SETTINGS).get(3).getValue();
-    speed = elements.get(EFFECT_SETTINGS).get(4).getValue();
     solidColor = color(r, g, b);
-    rbFreq = elements.get(EFFECT_SETTINGS).get(5).getValue();
-    pulseDelay = elements.get(EFFECT_SETTINGS).get(6).getValue();
-    usaFreq = elements.get(EFFECT_SETTINGS).get(7).getValue();
+    speed = elements.get(EFFECT_SETTINGS).get(5).getValue();
+    rbFreq = elements.get(EFFECT_SETTINGS).get(6).getValue();
+    pulseDelay = elements.get(EFFECT_SETTINGS).get(7).getValue();
+    usaFreq = elements.get(EFFECT_SETTINGS).get(8).getValue();
     breatheFreq = elements.get(LED_SETTINGS).get(1).getValue();
     maxBrightness = elements.get(LED_SETTINGS).get(3).getValue();
     blinkLength = elements.get(LED_SETTINGS).get(5).getValue();
@@ -496,13 +522,13 @@ public void applyEffects(){
             settings = new float[]{rbFreq, position};
         }
         if(eff == Effect.RB_PULSE){
-            settings = new float[]{pulseDelay, position};
+            settings = new float[]{pulseDelay};
         }
         if(eff == Effect.USA){
             settings = new float[]{usaFreq, position};
         }
         if(eff == Effect.MUSIC){
-            settings = new float[]{speed, vol};
+            settings = new float[]{speed, (vol + prevVol) / 2};
         }
         if(eff == Effect.BREATHE){
             settings = new float[]{breatheFreq, position, maxBrightness};
@@ -652,9 +678,9 @@ class Effect{
     static final int SOLID = 0, RB_WAVE = 1, RB_SOLID = 2, RB_PULSE = 3, WANDER = 4, USA = 5, MUSIC = 6, VIDEO = 7, BREATHE = 8, BLINK = 9, OFF = 10;
     private final int[] globalEffects = {BREATHE, BLINK, OFF}; //A global effect is one that can be applied on top of another effect
     private Strip strip;
-    private int blinkStart = 0, prevPulse = 0, prevMovement = 0;
+    private int blinkStart = Integer.MIN_VALUE, prevPulse = Integer.MIN_VALUE, prevMovement = Integer.MIN_VALUE, pulsePos = 0, prevColor = 0;
     private boolean blinking = false;
-    private float tempBrightness = 0;
+    private float tempBrightness = 0, maxVol = 0.00001f;
     private int[] musicColors;
 
     Effect(Strip s){
@@ -686,6 +712,10 @@ class Effect{
             }
         }
         return false;
+    }
+
+    public void resetMaxVol(){
+        maxVol = 0;
     }
 
 //=========================== HELPER FUNCTIONS ===========================//
@@ -736,11 +766,11 @@ class Effect{
 
     public void rbPulse(float[] settings){
         int speed = (int)settings[0];
-        int pos = (int)settings[1];
         //                         red      orange    yellow    green      blue     indigo    violet
         int[] rainbowColors = {0xFF0000, 0xFFA500, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0xEE82EE};
         if(millis() >= prevPulse + speed){
-            int col = rainbowColors[pos % rainbowColors.length];
+            int col = rainbowColors[pulsePos % rainbowColors.length];
+            pulsePos++;
             setAll(col);
             prevPulse = millis();
         }
@@ -780,19 +810,25 @@ class Effect{
     public void music(float settings[]){
         int speed = (int)(1 / settings[0] * 1000);
         float vol = settings[1];
-        int bandLength = (int)map(vol, 0, 1, 0, strip.length() / 2);
-        colorMode(HSB, 100);
-        int col = color(vol * 100, 100, 100);
-        colorMode(RGB, 255);
+        maxVol = vol > maxVol ? vol : maxVol;
+        int bandLength = (int)map(vol, 0, maxVol, 1, strip.length() / 2);
+
         if(millis() >= prevMovement + speed){
+            prevColor = musicColors[0];
+            colorMode(HSB, 255);
+            int col = color(map(bandLength, 0, strip.length() / 2, 0, 255), 255, 255);
+            float r = (red(col) + red(prevColor)) / 2.0f;
+            float g = (green(col) + green(prevColor)) / 2.0f;
+            float b = (blue(col) + blue(prevColor)) / 2.0f;
+            colorMode(RGB, 255);
+            col = color(r, g, b);
             prevMovement = millis();
             for(int i = musicColors.length - 2; i >= 0; i--){ //Shift colors to the right, then add new color
                 musicColors[i + 1] = musicColors[i];
             }
             musicColors[0] = col;
         }
-        setAll(0x000000);
-        println(vol);
+        setAll(0);
         for(int i = 0; i < bandLength; i++){
             strip.set(strip.length() / 2 - i, musicColors[i]);
             strip.set(strip.length() / 2 + i, musicColors[i]);
@@ -811,17 +847,17 @@ class Effect{
 		BufferedImage sc = screenReader.createScreenCapture(new java.awt.Rectangle(w, h));
         long totalR = 0, totalG = 0, totalB = 0;
         int[] rgb;
-        for(int i = 0; i < w; i++){
-            for(int j = 0; j < h; j++){
+        for(int i = 0; i < w; i+=100){
+            for(int j = 0; j < h; j+=100){
                 rgb = hexToRgb(sc.getRGB(i, j));
                 totalR += rgb[0];
                 totalG += rgb[1];
                 totalB += rgb[2];
             }
         }
-        totalR /= w * h;
-        totalG /= w * h;
-        totalB /= w * h;
+        totalR /= w / 100 * h / 100;
+        totalG /= w / 100 * h / 100;
+        totalB /= w / 100 * h / 100;
         int col = rgbToHex((int)totalR, (int)totalG, (int)totalB);
         setAll(col);
     }
@@ -1080,12 +1116,14 @@ class Strip{
         int r = 255, g = 0, b = 0;
         for(int i = 0; i < ledCount; i++){
             int col = colors[i];
+            if(leds[i] == 0){
+                col = -16777216;
+            }
             r = (col >> 16 & 0xFF);
             g = (col >> 8 & 0xFF);
             b = (col & 0xFF);
             output += r + "," + g + "," + b + "\n";
         }
-        //println(output);
         port.write(output);
     }
 

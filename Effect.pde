@@ -2,9 +2,9 @@ class Effect{
     static final int SOLID = 0, RB_WAVE = 1, RB_SOLID = 2, RB_PULSE = 3, WANDER = 4, USA = 5, MUSIC = 6, VIDEO = 7, BREATHE = 8, BLINK = 9, OFF = 10;
     private final int[] globalEffects = {BREATHE, BLINK, OFF}; //A global effect is one that can be applied on top of another effect
     private Strip strip;
-    private int blinkStart = 0, prevPulse = 0, prevMovement = 0;
+    private int blinkStart = Integer.MIN_VALUE, prevPulse = Integer.MIN_VALUE, prevMovement = Integer.MIN_VALUE, pulsePos = 0, prevColor = 0;
     private boolean blinking = false;
-    private float tempBrightness = 0;
+    private float tempBrightness = 0, maxVol = 0.00001;
     private int[] musicColors;
 
     Effect(Strip s){
@@ -36,6 +36,10 @@ class Effect{
             }
         }
         return false;
+    }
+
+    void resetMaxVol(){
+        maxVol = 0;
     }
 
 //=========================== HELPER FUNCTIONS ===========================//
@@ -86,11 +90,11 @@ class Effect{
 
     void rbPulse(float[] settings){
         int speed = (int)settings[0];
-        int pos = (int)settings[1];
         //                         red      orange    yellow    green      blue     indigo    violet
         int[] rainbowColors = {0xFF0000, 0xFFA500, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0xEE82EE};
         if(millis() >= prevPulse + speed){
-            int col = rainbowColors[pos % rainbowColors.length];
+            int col = rainbowColors[pulsePos % rainbowColors.length];
+            pulsePos++;
             setAll(col);
             prevPulse = millis();
         }
@@ -130,19 +134,25 @@ class Effect{
     void music(float settings[]){
         int speed = (int)(1 / settings[0] * 1000);
         float vol = settings[1];
-        int bandLength = (int)map(vol, 0, 1, 0, strip.length() / 2);
-        colorMode(HSB, 100);
-        int col = color(vol * 100, 100, 100);
-        colorMode(RGB, 255);
+        maxVol = vol > maxVol ? vol : maxVol;
+        int bandLength = (int)map(vol, 0, maxVol, 1, strip.length() / 2);
+
         if(millis() >= prevMovement + speed){
+            prevColor = musicColors[0];
+            colorMode(HSB, 255);
+            int col = color(map(bandLength, 0, strip.length() / 2, 0, 255), 255, 255);
+            float r = (red(col) + red(prevColor)) / 2.0;
+            float g = (green(col) + green(prevColor)) / 2.0;
+            float b = (blue(col) + blue(prevColor)) / 2.0;
+            colorMode(RGB, 255);
+            col = color(r, g, b);
             prevMovement = millis();
             for(int i = musicColors.length - 2; i >= 0; i--){ //Shift colors to the right, then add new color
                 musicColors[i + 1] = musicColors[i];
             }
             musicColors[0] = col;
         }
-        setAll(0x000000);
-        println(vol);
+        setAll(0);
         for(int i = 0; i < bandLength; i++){
             strip.set(strip.length() / 2 - i, musicColors[i]);
             strip.set(strip.length() / 2 + i, musicColors[i]);
@@ -161,17 +171,17 @@ class Effect{
 		BufferedImage sc = screenReader.createScreenCapture(new java.awt.Rectangle(w, h));
         long totalR = 0, totalG = 0, totalB = 0;
         int[] rgb;
-        for(int i = 0; i < w; i++){
-            for(int j = 0; j < h; j++){
+        for(int i = 0; i < w; i+=100){
+            for(int j = 0; j < h; j+=100){
                 rgb = hexToRgb(sc.getRGB(i, j));
                 totalR += rgb[0];
                 totalG += rgb[1];
                 totalB += rgb[2];
             }
         }
-        totalR /= w * h;
-        totalG /= w * h;
-        totalB /= w * h;
+        totalR /= w / 100 * h / 100;
+        totalG /= w / 100 * h / 100;
+        totalB /= w / 100 * h / 100;
         int col = rgbToHex((int)totalR, (int)totalG, (int)totalB);
         setAll(col);
     }

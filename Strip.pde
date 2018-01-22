@@ -35,12 +35,14 @@ class Strip{
         int r = 255, g = 0, b = 0;
         for(int i = 0; i < ledCount; i++){
             int col = colors[i];
+            if(leds[i] == 0){
+                col = -16777216;
+            }
             r = (col >> 16 & 0xFF);
             g = (col >> 8 & 0xFF);
             b = (col & 0xFF);
             output += r + "," + g + "," + b + "\n";
         }
-        //println(output);
         port.write(output);
     }
 
