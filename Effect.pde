@@ -2,7 +2,7 @@ class Effect{
     static final int SOLID = 0, RB_WAVE = 1, RB_SOLID = 2, RB_PULSE = 3, WANDER = 4, USA = 5, MUSIC = 6, VIDEO = 7, BREATHE = 8, BLINK = 9, OFF = 10;
     private final int[] globalEffects = {BREATHE, BLINK, OFF}; //A global effect is one that can be applied on top of another effect
     private Strip strip;
-    private int blinkStart = Integer.MIN_VALUE, prevPulse = Integer.MIN_VALUE, prevMovement = Integer.MIN_VALUE, pulsePos = 0, prevColor = 0;
+    private int blinkStart = Integer.MIN_VALUE, prevPulse = Integer.MIN_VALUE, prevMovement = Integer.MIN_VALUE, pulsePos = 0, prevColor = 0, prevUpdate = 0, startWidth = 0;
     private boolean blinking = false;
     private float tempBrightness = 0, maxVol = 0.00001;
     private int[] musicColors;
@@ -10,7 +10,26 @@ class Effect{
     Effect(Strip s){
         strip = s;
         musicColors = new int[strip.length() / 2];
-        setAll(0x9E3EE8); //Start with arbitrary color
+        //setAll(0x9E3EE8); //Start with arbitrary color
+    }
+    
+    //Effect to run when no other effects are present (only at startup)
+    void start(){
+        int speed = 10;
+        if(millis() >= speed + prevUpdate){
+            prevUpdate = millis();
+            startWidth++;
+            startWidth = constrain(startWidth, 0, strip.length() / 2);
+            setAll(0x000000);
+            colorMode(HSB, 100);
+            for(int i = 0; i < startWidth; i++){
+                int rightIndex = strip.length() / 2 + i;
+                int leftIndex = strip.length() / 2 - i - 1;
+                strip.set(rightIndex, color(map(rightIndex, strip.length() / 2, strip.length(), 0, 100), 100, 100));
+                strip.set(leftIndex, color(map(leftIndex, 0, strip.length() / 2, 0, 100), 100, 100));
+            }
+            colorMode(RGB, 255);
+        }
     }
 
     void fromID(int id, float[] settings){
@@ -108,7 +127,7 @@ class Effect{
             int[] rgb = hexToRgb(tempCol);
             color col = color(rgb[0], rgb[1], rgb[2]);
             colorMode(HSB);
-            col = color(hue(col) + random(-1, 3), saturation(col), brightness(col));
+            col = color(hue(col) + 2, saturation(col), brightness(col));
             colorMode(RGB);
             strip.set(i, col);
         }
@@ -154,7 +173,7 @@ class Effect{
         }
         setAll(0);
         for(int i = 0; i < bandLength; i++){
-            strip.set(strip.length() / 2 - i, musicColors[i]);
+            strip.set(strip.length() / 2 - i - 1, musicColors[i]);
             strip.set(strip.length() / 2 + i, musicColors[i]);
         }
     }

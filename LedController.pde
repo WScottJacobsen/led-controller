@@ -123,11 +123,16 @@ void draw() {
     vol = amp.analyze();
     delay = (int)elements.get(EFFECT_SETTINGS).get(0).getValue();
     strip.setBrightness(maxBrightness);
+    
+    if(effects.isEmpty()){
+        effectHandler.start(); 
+    }
 
     if(millis() >= lastUpdate + delay){
         applyEffects();
         strip.update(port);
         lastUpdate = millis();
+        position %= Integer.MAX_VALUE;
         position++;
     }
 }
@@ -274,7 +279,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             public void execute() {
                 addEffect(Effect.RB_WAVE);
                 resetSelected(EFFECTS, 0);
-				clicked();
+				        clicked();
             }
         }
     ));
@@ -285,7 +290,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             public void execute() {
                 addEffect(Effect.RB_SOLID);
                 resetSelected(EFFECTS, 0);
-				clicked();
+				        clicked();
             }
         }
     ));
@@ -296,7 +301,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             public void execute() {
                 addEffect(Effect.RB_PULSE);
                 resetSelected(EFFECTS, 0);
-				clicked();
+				        clicked();
             }
         }
     ));
@@ -307,7 +312,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             public void execute() {
                 addEffect(Effect.WANDER);
                 resetSelected(EFFECTS, 0);
-				clicked();
+				        clicked();
             }
         }
     ));
@@ -318,7 +323,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             public void execute() {
                 addEffect(Effect.USA);
                 resetSelected(EFFECTS, 0);
-				clicked();
+				        clicked();
             }
         }
     ));
@@ -329,7 +334,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             public void execute() {
                 addEffect(Effect.MUSIC);
                 resetSelected(EFFECTS, 0);
-				clicked();
+				        clicked();
             }
         }
     ));
@@ -340,7 +345,7 @@ void addElements(ArrayList<ArrayList<InputElement>> elements){
             public void execute() {
                 addEffect(Effect.VIDEO);
                 resetSelected(EFFECTS, 0);
-				clicked();
+				        clicked();
             }
         }
     ));

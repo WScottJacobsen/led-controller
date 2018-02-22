@@ -1206,7 +1206,7 @@ class Style{
 }
   public void settings() {  size(800, 800); }
   static public void main(String[] passedArgs) {
-    String[] appletArgs = new String[] { "--present", "--window-color=#666666", "--stop-color=#cccccc", "LedController" };
+    String[] appletArgs = new String[] { "LedController" };
     if (passedArgs != null) {
       PApplet.main(concat(appletArgs, passedArgs));
     } else {
